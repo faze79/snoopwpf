@@ -40,7 +40,7 @@ public sealed class SnoopMcpTools
         WriteIndented = true
     };
 
-    [McpServerTool("get_visual_tree"), Description("Get the visual tree structure of the currently inspected WPF application. Returns a hierarchical view of all UI elements.")]
+    [McpServerTool, Description("get_visual_tree: Get the visual tree structure of the currently inspected WPF application. Returns a hierarchical view of all UI elements.")]
     public static string GetVisualTree(
         SnoopContext context,
         [Description("Maximum depth to traverse (default: 10, max: 50)")] int maxDepth = 10,
@@ -54,11 +54,11 @@ public sealed class SnoopMcpTools
 
         maxDepth = Math.Clamp(maxDepth, 1, 50);
 
-        var tree = BuildTreeNode(root, 0, maxDepth, includeProperties, "");
+        var tree = BuildTreeNode(root, 0, maxDepth, includeProperties, string.Empty);
         return JsonSerializer.Serialize(new { tree }, JsonOptions);
     }
 
-    [McpServerTool("get_selected_element"), Description("Get detailed information about the currently selected element in the Snoop inspector, including its properties.")]
+    [McpServerTool, Description("get_selected_element: Get detailed information about the currently selected element in the Snoop inspector, including its properties.")]
     public static string GetSelectedElement(SnoopContext context)
     {
         var selection = context.GetCurrentSelection();
@@ -86,7 +86,7 @@ public sealed class SnoopMcpTools
         return JsonSerializer.Serialize(result, JsonOptions);
     }
 
-    [McpServerTool("get_element_properties"), Description("Get all properties of a specific element identified by its path in the visual tree.")]
+    [McpServerTool, Description("get_element_properties: Get all properties of a specific element identified by its path in the visual tree.")]
     public static string GetElementProperties(
         SnoopContext context,
         [Description("Path to the element (e.g., '0/2/1' for root's child 0, then child 2, then child 1)")] string path,
@@ -112,7 +112,7 @@ public sealed class SnoopMcpTools
         }, JsonOptions);
     }
 
-    [McpServerTool("select_element"), Description("Select an element in the visual tree by its path, making it the current selection in Snoop.")]
+    [McpServerTool, Description("select_element: Select an element in the visual tree by its path, making it the current selection in Snoop.")]
     public static string SelectElement(
         SnoopContext context,
         [Description("Path to the element (e.g., '0/2/1')")] string path)
@@ -137,7 +137,7 @@ public sealed class SnoopMcpTools
         }, JsonOptions);
     }
 
-    [McpServerTool("find_elements"), Description("Find elements in the visual tree by type name or element name.")]
+    [McpServerTool, Description("find_elements: Find elements in the visual tree by type name or element name.")]
     public static string FindElements(
         SnoopContext context,
         [Description("Type name to search for (e.g., 'Button', 'TextBox')")] string? typeName = null,
@@ -165,7 +165,7 @@ public sealed class SnoopMcpTools
         }, JsonOptions);
     }
 
-    [McpServerTool("get_bindings"), Description("Get all data bindings on the currently selected element, including binding errors.")]
+    [McpServerTool, Description("get_bindings: Get all data bindings on the currently selected element, including binding errors.")]
     public static string GetBindings(SnoopContext context)
     {
         var selection = context.GetCurrentSelection();
@@ -227,7 +227,7 @@ public sealed class SnoopMcpTools
         }, JsonOptions);
     }
 
-    [McpServerTool("get_element_preview"), Description("Capture a visual preview/screenshot of the currently selected element as a base64-encoded PNG image.")]
+    [McpServerTool, Description("get_element_preview: Capture a visual preview/screenshot of the currently selected element as a base64-encoded PNG image.")]
     public static string GetElementPreview(
         SnoopContext context,
         [Description("Maximum width of the preview image (default: 400)")] int maxWidth = 400,

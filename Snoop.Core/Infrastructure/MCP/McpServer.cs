@@ -26,8 +26,8 @@ using ModelContextProtocol.Server;
 #else
 using System.Collections.Generic;
 using System.IO;
-using System.Net;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -248,11 +248,11 @@ public sealed class McpServer : INotifyPropertyChanged, IDisposable
 
 #else
     // Fallback implementation for .NET Framework and .NET 6
-    public async Task<bool> StartAsync(int preferredPort = 0)
+    public Task<bool> StartAsync(int preferredPort = 0)
     {
         if (this.IsRunning)
         {
-            return true;
+            return Task.FromResult(true);
         }
 
         this.cancellationTokenSource = new CancellationTokenSource();
@@ -276,7 +276,7 @@ public sealed class McpServer : INotifyPropertyChanged, IDisposable
                 // Start listening for requests
                 _ = Task.Run(() => this.ListenAsync(this.cancellationTokenSource.Token));
 
-                return true;
+                return Task.FromResult(true);
             }
             catch (HttpListenerException)
             {
@@ -285,7 +285,7 @@ public sealed class McpServer : INotifyPropertyChanged, IDisposable
             }
         }
 
-        return false;
+        return Task.FromResult(false);
     }
 
     public void Stop()
@@ -505,7 +505,7 @@ public sealed class McpServer : INotifyPropertyChanged, IDisposable
     {
         return new
         {
-            tools = new[]
+            tools = new object[]
             {
                 new
                 {
@@ -649,7 +649,7 @@ public sealed class McpServer : INotifyPropertyChanged, IDisposable
         var toolName = paramsElement.GetProperty("name").GetString();
         var arguments = paramsElement.TryGetProperty("arguments", out var args) ? args : default;
 
-        return await this.dispatcher.InvokeAsync(() =>
+        return await this.dispatcher.InvokeAsync<object>(() =>
         {
             try
             {
@@ -665,7 +665,7 @@ public sealed class McpServer : INotifyPropertyChanged, IDisposable
                     _ => throw new InvalidOperationException($"Unknown tool: {toolName}")
                 };
 
-                return new
+                return (object)new
                 {
                     content = new[]
                     {
@@ -679,7 +679,7 @@ public sealed class McpServer : INotifyPropertyChanged, IDisposable
             }
             catch (Exception ex)
             {
-                return new
+                return (object)new
                 {
                     content = new[]
                     {
@@ -721,7 +721,7 @@ public sealed class McpServer : INotifyPropertyChanged, IDisposable
 
         return new
         {
-            tree = this.BuildTreeNode(root, 0, maxDepth, includeProperties, "")
+            tree = this.BuildTreeNode(root, 0, maxDepth, includeProperties, string.Empty)
         };
     }
 
@@ -971,7 +971,7 @@ public sealed class McpServer : INotifyPropertyChanged, IDisposable
         }
 
         var results = new List<object>();
-        this.SearchTree(root, typeName, elementName, "", results, maxResults);
+        this.SearchTree(root, typeName, elementName, string.Empty, results, maxResults);
 
         return new
         {
