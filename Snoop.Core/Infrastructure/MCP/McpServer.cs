@@ -26,8 +26,8 @@ using ModelContextProtocol.Server;
 #else
 using System.Collections.Generic;
 using System.IO;
-using System.Net;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -146,9 +146,6 @@ public sealed class McpServer : INotifyPropertyChanged, IDisposable
             builder.Logging.AddDebug();
             builder.Logging.SetMinimumLevel(LogLevel.Warning);
 
-            // Configure the server URL
-            builder.WebHost.UseUrls($"http://localhost:{portToUse}");
-
             // Add MCP server with the Snoop tools
             builder.Services.AddSingleton(snoopContext);
             builder.Services
@@ -158,6 +155,9 @@ public sealed class McpServer : INotifyPropertyChanged, IDisposable
 
             this.webApplication = builder.Build();
 
+            // Configure the server URL
+            this.webApplication.Urls.Add($"http://localhost:{portToUse}");
+
             // Map the MCP endpoints (/sse and /messages)
             this.webApplication.MapMcp();
 
@@ -166,7 +166,7 @@ public sealed class McpServer : INotifyPropertyChanged, IDisposable
             {
                 try
                 {
-                    await this.webApplication.RunAsync(this.cancellationTokenSource.Token);
+                    await this.webApplication.RunAsync();
                 }
                 catch (OperationCanceledException)
                 {
@@ -176,7 +176,7 @@ public sealed class McpServer : INotifyPropertyChanged, IDisposable
                 {
                     System.Diagnostics.Debug.WriteLine($"MCP Server error: {ex.Message}");
                 }
-            });
+            }, this.cancellationTokenSource!.Token);
 
             // Give the server a moment to start
             await Task.Delay(100);
@@ -248,15 +248,15 @@ public sealed class McpServer : INotifyPropertyChanged, IDisposable
 
 #else
     // Fallback implementation for .NET Framework and .NET 6
-    public async Task<bool> StartAsync(int preferredPort = 0)
+    public Task<bool> StartAsync(int preferredPort = 0)
     {
         if (this.IsRunning)
         {
-            return true;
+            return Task.FromResult(true);
         }
 
         this.cancellationTokenSource = new CancellationTokenSource();
-        this.sessionId = Guid.NewGuid().ToString("N")[..8];
+        this.sessionId = Guid.NewGuid().ToString("N").Substring(0, 8);
 
         // Try to find an available port
         var portsToTry = preferredPort > 0
@@ -276,7 +276,7 @@ public sealed class McpServer : INotifyPropertyChanged, IDisposable
                 // Start listening for requests
                 _ = Task.Run(() => this.ListenAsync(this.cancellationTokenSource.Token));
 
-                return true;
+                return Task.FromResult(true);
             }
             catch (HttpListenerException)
             {
@@ -285,7 +285,7 @@ public sealed class McpServer : INotifyPropertyChanged, IDisposable
             }
         }
 
-        return false;
+        return Task.FromResult(false);
     }
 
     public void Stop()
@@ -390,7 +390,7 @@ public sealed class McpServer : INotifyPropertyChanged, IDisposable
         response.Headers.Add("Cache-Control", "no-cache");
         response.Headers.Add("Connection", "keep-alive");
 
-        using var writer = new StreamWriter(response.OutputStream, Encoding.UTF8, leaveOpen: true);
+        using var writer = new StreamWriter(response.OutputStream, Encoding.UTF8, 1024, leaveOpen: true);
 
         // Send the endpoint event with the messages URL
         var endpointEvent = new
@@ -505,7 +505,7 @@ public sealed class McpServer : INotifyPropertyChanged, IDisposable
     {
         return new
         {
-            tools = new[]
+            tools = new object[]
             {
                 new
                 {
@@ -649,7 +649,7 @@ public sealed class McpServer : INotifyPropertyChanged, IDisposable
         var toolName = paramsElement.GetProperty("name").GetString();
         var arguments = paramsElement.TryGetProperty("arguments", out var args) ? args : default;
 
-        return await this.dispatcher.InvokeAsync(() =>
+        return await this.dispatcher.InvokeAsync<object>(() =>
         {
             try
             {
@@ -665,7 +665,7 @@ public sealed class McpServer : INotifyPropertyChanged, IDisposable
                     _ => throw new InvalidOperationException($"Unknown tool: {toolName}")
                 };
 
-                return new
+                return (object)new
                 {
                     content = new[]
                     {
@@ -679,7 +679,7 @@ public sealed class McpServer : INotifyPropertyChanged, IDisposable
             }
             catch (Exception ex)
             {
-                return new
+                return (object)new
                 {
                     content = new[]
                     {
@@ -721,7 +721,7 @@ public sealed class McpServer : INotifyPropertyChanged, IDisposable
 
         return new
         {
-            tree = this.BuildTreeNode(root, 0, maxDepth, includeProperties, "")
+            tree = this.BuildTreeNode(root, 0, maxDepth, includeProperties, string.Empty)
         };
     }
 
@@ -792,12 +792,12 @@ public sealed class McpServer : INotifyPropertyChanged, IDisposable
 
         if (depObj is System.Windows.Controls.TextBlock tb)
         {
-            props["Text"] = tb.Text?.Length > 100 ? tb.Text[..100] + "..." : tb.Text;
+            props["Text"] = tb.Text?.Length > 100 ? tb.Text.Substring(0, 100) + "..." : tb.Text;
         }
 
         if (depObj is System.Windows.Controls.TextBox textBox)
         {
-            props["Text"] = textBox.Text?.Length > 100 ? textBox.Text[..100] + "..." : textBox.Text;
+            props["Text"] = textBox.Text?.Length > 100 ? textBox.Text.Substring(0, 100) + "..." : textBox.Text;
         }
 
         return props;
@@ -905,7 +905,7 @@ public sealed class McpServer : INotifyPropertyChanged, IDisposable
 
         if (value is string s)
         {
-            return s.Length > 200 ? s[..200] + "..." : s;
+            return s.Length > 200 ? s.Substring(0, 200) + "..." : s;
         }
 
         if (value is Brush brush)
@@ -971,7 +971,7 @@ public sealed class McpServer : INotifyPropertyChanged, IDisposable
         }
 
         var results = new List<object>();
-        this.SearchTree(root, typeName, elementName, "", results, maxResults);
+        this.SearchTree(root, typeName, elementName, string.Empty, results, maxResults);
 
         return new
         {
@@ -1199,7 +1199,7 @@ public sealed class McpServer : INotifyPropertyChanged, IDisposable
             return null;
         }
 
-        var indices = path.Split('/').Select(int.Parse).ToArray();
+        var indices = path!.Split('/').Select(int.Parse).ToArray();
         var current = root;
 
         foreach (var index in indices)
@@ -1224,7 +1224,7 @@ public sealed class McpServer : INotifyPropertyChanged, IDisposable
         var buffer = Encoding.UTF8.GetBytes(json);
 
         response.ContentLength64 = buffer.Length;
-        await response.OutputStream.WriteAsync(buffer);
+        await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
         response.Close();
     }
 #endif

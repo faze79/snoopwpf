@@ -7,6 +7,9 @@
     <UseWpf>true</UseWpf>
     <UseWindowsForms>true</UseWindowsForms>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+    <!-- Override LangVersion for MCP features -->
+    <LangVersion>11</LangVersion>
   </PropertyGroup>
 
   <!-- Define MCP_SDK for .NET 8+ where the official SDK is available -->
@@ -41,5 +44,10 @@
   <ItemGroup Label="MCP" Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0'))">
     <PackageReference Include="ModelContextProtocol" />
     <PackageReference Include="ModelContextProtocol.AspNetCore" />
+  </ItemGroup>
+
+  <!-- System.Text.Json for .NET Framework 4.6.2 and .NET 6 MCP fallback -->
+  <ItemGroup Condition="'$(TargetFramework)' == '$(MinTargetFramework)' OR '$(TargetFramework)' == '$(MinCoreTargetFramework)'">
+    <PackageReference Include="System.Text.Json" />
   </ItemGroup>
 </Project>
